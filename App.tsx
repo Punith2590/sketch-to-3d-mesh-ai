@@ -98,7 +98,9 @@ const App: React.FC = () => {
       // 1. Create FormData to send the file AND the text prompt
       const formData = new FormData();
       formData.append("file", sketchFile, sketchFile.name);
-      formData.append("prompt", textPrompt || "a 3d model"); // Send the prompt, or a default
+      const basePrompt = textPrompt || "object"; // Use user's text or a default
+      const enhancedPrompt = `${basePrompt}, photorealistic, high quality render, 3d model, centered, sharp focus, white background`;
+      formData.append("prompt", enhancedPrompt); // Send the prompt, or a default
 
       // 2. Call your NEW Colab backend
       // We are *only* sending the file.
