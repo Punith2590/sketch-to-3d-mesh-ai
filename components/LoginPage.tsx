@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { CubeIcon } from './icons/CubeIcon';
-import { UserIcon } from './icons/UserIcon';
-import { LockIcon } from './icons/LockIcon';
+import { CubeIcon } from './icons';
+import { UserIcon } from './icons';
+import { LockIcon } from './icons';
 
 interface LoginPageProps {
   onLogin: () => void;

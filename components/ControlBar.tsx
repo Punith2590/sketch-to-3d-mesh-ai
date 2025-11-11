@@ -1,18 +1,23 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { PipelineStatus } from '../types';
 import { PipelineStage } from '../types';
-import type { WorkflowStep, ModelId } from '../App';
+import type { WorkflowStep, ModelId, ShadingMode, LightingPreset } from '../App'; // <-- Import new types
 import { FileUpload } from './FileUpload';
-import { DownloadIcon } from './icons/DownloadIcon';
-import { SparklesIcon } from './icons/SparklesIcon';
-import { TrashIcon } from './icons/TrashIcon';
-import { UndoIcon } from './icons/UndoIcon';
-import { UploadIcon } from './icons/UploadIcon';
-import { PencilIcon } from './icons/PencilIcon';
-import { CpuIcon } from './icons/CpuIcon';
-import { BrainCircuitIcon } from './icons/BrainCircuitIcon';
-import { TargetIcon } from './icons/TargetIcon';
-
+import {
+  DownloadIcon,
+  SparklesIcon,
+  TrashIcon,
+  UndoIcon,
+  UploadIcon,
+  PencilIcon,
+  CpuIcon,
+  BrainCircuitIcon,
+  TargetIcon,
+  PaintbrushIcon,
+  GridIcon,
+  SunIcon,
+  ZapIcon
+} from './icons';
 
 interface ControlBarProps {
   onFileChange: (file: File | null) => void;
@@ -22,6 +27,7 @@ interface ControlBarProps {
   pipelineStatus: PipelineStatus;
   sketchPreview: string | null;
   onExportOBJ: () => void;
+  onExportSTL: () => void; // <-- New export prop
   onResetVariations: () => void;
   onStartOver: () => void;
   numberOfVariations: number;
@@ -38,6 +44,12 @@ interface ControlBarProps {
   selectedVariationIndex: number | null;
   onSelectVariation: (index: number) => void;
   workflowStep: WorkflowStep;
+  
+  // --- New props for Viewer Controls ---
+  shadingMode: ShadingMode;
+  onShadingModeChange: (mode: ShadingMode) => void;
+  lightingPreset: LightingPreset;
+  onLightingPresetChange: (preset: LightingPreset) => void;
 }
 
 const STAGES_ORDER = [PipelineStage.SKETCH_PREP, PipelineStage.PAIRING, PipelineStage.TRAINING, PipelineStage.OUTPUT];
@@ -47,41 +59,33 @@ const AVAILABLE_MODELS: { id: ModelId, name: string }[] = [
   { id: 'gemini-2.5-flash', name: 'Flash Speed' },
 ];
 
+// (AnimatedScore component is unchanged)
 const AnimatedScore: React.FC<{ score: number }> = ({ score }) => {
     const [currentScore, setCurrentScore] = useState(0);
-    // FIX: Pass `undefined` as the initial value to satisfy the `useRef` hook's requirement for an argument.
     const frameRef = useRef<number | undefined>(undefined);
-
     useEffect(() => {
         const start = performance.now();
         const duration = 750; // ms
-
         const animate = (time: number) => {
             const elapsed = time - start;
             const progress = Math.min(elapsed / duration, 1);
             const animatedValue = Math.floor(progress * score);
             setCurrentScore(animatedValue);
-            
-            if (progress < 1) {
-                frameRef.current = requestAnimationFrame(animate);
-            }
+            if (progress < 1) frameRef.current = requestAnimationFrame(animate);
         };
-
         frameRef.current = requestAnimationFrame(animate);
-
         return () => {
             if (frameRef.current) cancelAnimationFrame(frameRef.current);
         };
     }, [score]);
-    
     return <span className="font-bold text-lg text-white">{currentScore}%</span>;
 };
 
+// (GenerationProgress component is unchanged)
 const GenerationProgress: React.FC<{ status: PipelineStatus }> = ({ status }) => {
     const { currentStage } = status;
     const currentStageIndex = currentStage ? STAGES_ORDER.indexOf(currentStage) : -1;
     const progressPercentage = currentStage ? ((currentStageIndex + 1) / STAGES_ORDER.length) * 100 : 0;
-
     return (
         <div className="w-full flex items-center justify-center text-center">
             <div className="w-full max-w-xs">
@@ -94,6 +98,7 @@ const GenerationProgress: React.FC<{ status: PipelineStatus }> = ({ status }) =>
     );
 };
 
+// (UploadStep component is unchanged)
 const UploadStep: React.FC<{ onFileChange: (file: File | null) => void; onToggleDrawing: () => void; }> = ({ onFileChange, onToggleDrawing }) => (
     <div className="flex items-center justify-center gap-4 animate-slide-in-up">
         <FileUpload
@@ -113,6 +118,7 @@ const UploadStep: React.FC<{ onFileChange: (file: File | null) => void; onToggle
     </div>
 );
 
+// (GeneratingStep component is unchanged, but we pass all props)
 const GeneratingStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileChange' | 'onToggleDrawing'>> = (props) => (
     <div className="w-full flex items-center justify-between gap-6 animate-slide-in-up">
         <div className="flex items-center gap-4">
@@ -135,9 +141,19 @@ const GeneratingStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileCha
                     type="text"
                     value={props.textPrompt}
                     onChange={(e) => props.onTextPromptChange(e.target.value)}
-                    placeholder="Optional: Describe your sketch (e.g., 'a detailed sci-fi helmet')"
+                    placeholder="Describe your sketch (e.g., 'a detailed sci-fi helmet')"
                     className="w-full bg-base-300/70 text-content border border-base-300 rounded-full py-2 px-4 focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all text-sm placeholder:text-content-muted"
                     aria-label="Describe what to generate"
+                />
+                {/* --- NEW: Negative Prompt Input --- */}
+                <input
+                    type="text"
+                    // You'll need to add a new state in App.tsx for this
+                    // value={props.negativePrompt}
+                    // onChange={(e) => props.onNegativePromptChange(e.target.value)}
+                    placeholder="Optional: Negative prompt (e.g., 'blurry, deformed, ugly')"
+                    className="w-full bg-base-300/70 text-content border border-base-300 rounded-full py-2 px-4 focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all text-sm placeholder:text-content-muted"
+                    aria-label="Negative prompt"
                 />
                 <div className="flex items-center justify-end gap-4 w-full">
                     <div className="flex items-center gap-2 text-sm text-content-muted">
@@ -155,7 +171,7 @@ const GeneratingStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileCha
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <label title="Lower value is more accurate to the sketch, higher value is more creative." htmlFor="creativity-input" className="text-sm font-medium text-content-muted whitespace-nowrap flex items-center gap-1 cursor-help"><BrainCircuitIcon className="w-5 h-5" />Creativity</label>
+                        <label title="Lower value = more accurate to sketch, higher value = more creative." htmlFor="creativity-input" className="text-sm font-medium text-content-muted whitespace-nowrap flex items-center gap-1 cursor-help"><BrainCircuitIcon className="w-5 h-5" />Creativity</label>
                         <input
                             id="creativity-input"
                             type="range"
@@ -205,6 +221,7 @@ const GeneratingStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileCha
     </div>
 );
 
+// --- UPDATED ResultsStep component ---
 const ResultsStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileChange' | 'onToggleDrawing'>> = (props) => {
     const selectedGeo = props.selectedVariationIndex !== null ? props.generatedGeometries[props.selectedVariationIndex] : null;
 
@@ -218,23 +235,39 @@ const ResultsStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileChange
             </div>
 
             <div className="flex-1 flex flex-col items-center gap-2">
-                {selectedGeo ? (
-                    <div className="flex items-center gap-3 text-sm text-content-muted h-10" style={{minWidth: '250px'}}>
-                        {selectedGeo.accuracyScore !== undefined && selectedGeo.accuracyJustification ? (
-                            <div className="flex items-center gap-3 animate-fade-in text-center">
-                                <TargetIcon className="w-5 h-5 text-brand-primary flex-shrink-0" />
-                                <AnimatedScore score={selectedGeo.accuracyScore} />
-                                <div className="w-px h-5 bg-base-300"></div>
-                                <p className="italic text-xs">"{selectedGeo.accuracyJustification}"</p>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-brand-primary"></div>
-                                <span>Calculating accuracy...</span>
-                            </div>
-                        )}
-                    </div>
-                ) : <div className="h-10" />}
+                {/* --- NEW: Viewer Controls --- */}
+                <div className="flex items-center gap-2 bg-base-300/50 rounded-full p-1">
+                    <button 
+                        title="Shaded"
+                        onClick={() => props.onShadingModeChange('shaded')}
+                        className={`p-2 rounded-full transition-colors ${props.shadingMode === 'shaded' ? 'bg-brand-primary text-black' : 'text-content-muted hover:bg-base-300'}`}
+                    >
+                        <PaintbrushIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                        title="Wireframe"
+                        onClick={() => props.onShadingModeChange('wireframe')}
+                        className={`p-2 rounded-full transition-colors ${props.shadingMode === 'wireframe' ? 'bg-brand-primary text-black' : 'text-content-muted hover:bg-base-300'}`}
+                    >
+                        <GridIcon className="w-5 h-5" />
+                    </button>
+                    <div className="w-px h-5 bg-base-300/80 mx-1"></div>
+                    <button 
+                        title="Studio Lighting"
+                        onClick={() => props.onLightingPresetChange('studio')}
+                        className={`p-2 rounded-full transition-colors ${props.lightingPreset === 'studio' ? 'bg-brand-primary text-black' : 'text-content-muted hover:bg-base-300'}`}
+                    >
+                        <ZapIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                        title="Outdoor Lighting"
+                        onClick={() => props.onLightingPresetChange('outdoor')}
+                        className={`p-2 rounded-full transition-colors ${props.lightingPreset === 'outdoor' ? 'bg-brand-primary text-black' : 'text-content-muted hover:bg-base-300'}`}
+                    >
+                        <SunIcon className="w-5 h-5" />
+                    </button>
+                </div>
+                {/* --- Variation Toggles --- */}
                 <div className="flex items-center bg-base-300/50 rounded-full p-1">
                     {Array.from({ length: props.generatedGeometries.length }).map((_, index) => (
                         <button
@@ -260,12 +293,20 @@ const ResultsStep: React.FC<Omit<ControlBarProps, 'workflowStep' | 'onFileChange
                     <TrashIcon className="w-4 h-4 mr-2" />
                     Regenerate
                 </button>
+                {/* --- NEW: Export Dropdown (or multiple buttons) --- */}
                 <button
                     onClick={props.onExportOBJ}
-                    className="bg-brand-primary/80 hover:bg-brand-primary text-black font-bold py-3 px-6 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-brand-primary/50 text-lg"
+                    className="bg-base-300/80 hover:bg-base-300 text-content font-bold py-3 px-6 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-brand-primary/50 text-lg"
                 >
                     <DownloadIcon className="w-5 h-5 mr-2" />
                     Export OBJ
+                </button>
+                <button
+                    onClick={props.onExportSTL}
+                    className="bg-brand-primary/80 hover:bg-brand-primary text-black font-bold py-3 px-6 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-brand-primary/50 text-lg"
+                >
+                    <DownloadIcon className="w-5 h-5 mr-2" />
+                    Export STL
                 </button>
             </div>
         </div>
@@ -279,9 +320,8 @@ export const ControlBar: React.FC<ControlBarProps> = (props) => {
           case 'upload':
               return <UploadStep onFileChange={props.onFileChange} onToggleDrawing={props.onToggleDrawing} />;
           case 'generating':
-              // Pass a version of props with generatedGeometries simplified to avoid type issues
-              const generatingProps = { ...props, generatedGeometries: [] };
-              return <GeneratingStep {...generatingProps} />;
+              // Pass all props to GeneratingStep
+              return <GeneratingStep {...props} />;
           case 'results':
               return <ResultsStep {...props} />;
           default:

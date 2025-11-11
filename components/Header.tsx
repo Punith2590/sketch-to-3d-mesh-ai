@@ -1,5 +1,5 @@
 import React from 'react';
-import { CubeIcon } from './icons/CubeIcon';
+import { CubeIcon } from './icons';
 
 export const Header: React.FC = () => {
   return (
