@@ -2,29 +2,27 @@ import React, { useState, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { Header } from './components/Header';
 import { ControlBar } from './components/ControlBar';
+import { Sidebar } from './components/Sidebar';
 import { Viewer } from './components/Viewer';
 import { LoginPage } from './components/LoginPage';
 import { SignUpPage } from './components/SignUpPage';
 import { Toast } from './components/Toast';
 import { DrawingCanvas } from './components/DrawingCanvas';
-import type { PipelineStatus } from './types';
-import { PipelineStage } from './types';
+// import type { PipelineStatus } from './types'; // <-- REMOVED
+// import { PipelineStage } from './types'; // <-- REMOVED
 
-// This is the geometry format our backend returns
+// (GeneratedGeometry type is unchanged)
 type GeneratedGeometry = {
   vertices: number[];
   faces: number[];
   uvs?: number[];
-  accuracyScore?: number;
-  accuracyJustification?: string;
 };
 
 export type WorkflowStep = 'upload' | 'generating' | 'results';
 type AuthScreen = 'login' | 'signup';
-// We keep this type for the ControlBar, but won't use it for API calls
 export type ModelId = 'gemini-2.5-pro' | 'gemini-2.5-flash';
 
-// --- NEW: Types for Viewer Controls ---
+// --- Types for Viewer Controls ---
 export type ShadingMode = 'shaded' | 'wireframe';
 export type LightingPreset = 'studio' | 'outdoor';
 
@@ -36,25 +34,20 @@ const App: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('upload');
-  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>({
-    currentStage: null,
-    completedStages: new Set(),
-  });
+  
+  // --- REMOVED pipelineStatus state ---
+  
   const [generatedGeometries, setGeneratedGeometries] = useState<GeneratedGeometry[]>([]);
-  const [selectedGeometryIndex, setSelectedGeometryIndex] = useState<number | null>(0); // Default to first
+  const [selectedGeometryIndex, setSelectedGeometryIndex] = useState<number | null>(0);
   const [error, setError] = useState<string | null>(null);
   const [sketchPreview, setSketchPreview] = useState<string | null>(null);
   const modelRef = useRef<THREE.Group>(null!);
 
-  // --- State for ControlBar ---
+  // --- State for ControlBar (Simplified) ---
   const [textPrompt, setTextPrompt] = useState<string>('');
-  const [negativePrompt, setNegativePrompt] = useState<string>(''); // <-- NEW
   const [numberOfVariations, setNumberOfVariations] = useState<number>(1);
-  const [generateUVs, setGenerateUVs] = useState<boolean>(false);
-  const [selectedModel, setSelectedModel] = useState<ModelId>('gemini-2.5-pro');
-  const [creativityLevel, setCreativityLevel] = useState<number>(20);
 
-  // --- NEW: State for Viewer Controls ---
+  // --- State for Viewer Controls ---
   const [shadingMode, setShadingMode] = useState<ShadingMode>('shaded');
   const [lightingPreset, setLightingPreset] = useState<LightingPreset>('studio');
 
@@ -72,10 +65,6 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * This function now calls the new InstantMesh backend.
-   * It only sends the image file.
-   */
   const handleGeneration = async () => {
     if (!sketchFile) {
       setError("Please upload a sketch first.");
@@ -83,12 +72,7 @@ const App: React.FC = () => {
     }
 
     // !!! PASTE YOUR NGROK URL FROM THE COLAB NOTEBOOK HERE
-    const BACKEND_URL = "https://kim-dilemmic-overtrustfully.ngrok-free.dev/generate-mesh/";
-
-    if (BACKEND_URL.includes("YOUR_NEW_INSTANTMESH_NGROK_URL")) {
-        setError("Please update the BACKEND_URL in App.tsx with your new ngrok URL.");
-        return;
-    }
+    const BACKEND_URL = "https://kim-dilemmic-overtrustfully.ngrok-free.dev/generate-mesh/"; // Placeholder
 
     setIsGenerating(true);
     setError(null);
@@ -96,16 +80,14 @@ const App: React.FC = () => {
     setSelectedGeometryIndex(null);
     setWorkflowStep('generating');
     
-    setPipelineStatus({ currentStage: PipelineStage.TRAINING, completedStages: new Set() });
+    // --- REMOVED setPipelineStatus call ---
 
     try {
-      // --- UPDATED: Send all data to backend ---
+      // --- UPDATED: Send simplified data ---
       const formData = new FormData();
       formData.append("file", sketchFile, sketchFile.name);
       formData.append("prompt", textPrompt || "a 3d model");
-      formData.append("negative_prompt", negativePrompt); // <-- Send negative prompt
-      formData.append("variations", String(numberOfVariations)); // <-- Send variations
-      formData.append("creativity", String(creativityLevel)); // <-- Send creativity
+      formData.append("variations", String(numberOfVariations));
       
       const response = await fetch(BACKEND_URL, {
         method: "POST",
@@ -117,7 +99,6 @@ const App: React.FC = () => {
         throw new Error(`Backend Error: ${errData.detail || response.statusText}`);
       }
       
-      // --- UPDATED: Handle list of geometries ---
       const results = await response.json();
 
       if (!Array.isArray(results) || results.length === 0) {
@@ -129,8 +110,6 @@ const App: React.FC = () => {
         return {
           vertices: res.vertices,
           faces: res.faces,
-          accuracyScore: 100, 
-          accuracyJustification: "Generated by 2-Stage Pipeline"
         };
       }).filter((g: GeneratedGeometry | null) => g !== null);
 
@@ -141,12 +120,13 @@ const App: React.FC = () => {
       setGeneratedGeometries(geometries);
       setSelectedGeometryIndex(0); // Select the first mesh
       setWorkflowStep('results'); // Move to the results view
-      setPipelineStatus({ currentStage: null, completedStages: new Set(Object.values(PipelineStage)) });
+      
+      // --- REMOVED setPipelineStatus call ---
 
     } catch (e) {
       console.error(e);
       setError(`Generation Error: ${e instanceof Error ? e.message : String(e)}`);
-      setPipelineStatus({ currentStage: null, completedStages: new Set() });
+      // --- REMOVED setPipelineStatus call ---
       setWorkflowStep(sketchFile ? 'generating' : 'upload');
     } finally {
       setIsGenerating(false);
@@ -163,7 +143,7 @@ const App: React.FC = () => {
 
   const handleResetVariations = useCallback(() => {
     setIsGenerating(false);
-    setPipelineStatus({ currentStage: null, completedStages: new Set() });
+    // --- REMOVED setPipelineStatus call ---
     setGeneratedGeometries([]);
     setSelectedGeometryIndex(null);
     setError(null);
@@ -172,6 +152,7 @@ const App: React.FC = () => {
     }
   }, [sketchFile]);
 
+  // (saveFile function is unchanged)
   const saveFile = (blob: Blob, filename: string) => {
     const link = document.createElement('a');
     link.style.display = 'none';
@@ -190,6 +171,7 @@ const App: React.FC = () => {
     return generatedGeometries[selectedGeometryIndex];
   }
 
+  // (handleExportOBJ is unchanged)
   const handleExportOBJ = () => {
     const geoData = getSelectedGeo();
     if (!geoData) {
@@ -217,7 +199,7 @@ const App: React.FC = () => {
     saveFile(new Blob([output], { type: 'text/plain' }), `model_${(selectedGeometryIndex ?? 0) + 1}.obj`);
   };
   
-  // --- NEW: STL Export Function ---
+  // (handleExportSTL is unchanged)
   const handleExportSTL = () => {
     const geoData = getSelectedGeo();
     if (!geoData) {
@@ -237,7 +219,6 @@ const App: React.FC = () => {
         const v2 = new THREE.Vector3(vertices[v2Idx], vertices[v2Idx + 1], vertices[v2Idx + 2]);
         const v3 = new THREE.Vector3(vertices[v3Idx], vertices[v3Idx + 1], vertices[v3Idx + 2]);
 
-        // Calculate normal
         const normal = new THREE.Vector3().crossVectors(
             v2.clone().sub(v1),
             v3.clone().sub(v1)
@@ -285,47 +266,45 @@ const App: React.FC = () => {
         <Viewer 
           geometry={selectedGeometry} 
           isGenerating={isGenerating}
-          pipelineStatus={pipelineStatus}
+          // pipelineStatus={pipelineStatus} // <-- REMOVED
           modelRef={modelRef}
-          shadingMode={shadingMode} // <-- Pass new state
-          lightingPreset={lightingPreset} // <-- Pass new state
-        />
-        <ControlBar
-          onFileChange={handleFileChange}
-          onGenerate={handleGeneration}
-          onToggleDrawing={handleToggleDrawing}
-          isGenerating={isGenerating}
-          pipelineStatus={pipelineStatus}
-          sketchPreview={sketchPreview}
-          onExportOBJ={handleExportOBJ}
-          onExportSTL={handleExportSTL} // <-- Pass new prop
-          onResetVariations={handleResetVariations}
-          onStartOver={handleStartOver}
-          
-          numberOfVariations={numberOfVariations}
-          onNumberOfVariationsChange={setNumberOfVariations}
-          generateUVs={generateUVs}
-          onGenerateUVsChange={setGenerateUVs}
-          textPrompt={textPrompt}
-          onTextPromptChange={setTextPrompt}
-          // negativePrompt={negativePrompt} // <-- Pass new state
-          // onNegativePromptChange={setNegativePrompt} // <-- Pass new state
-          selectedModel={selectedModel}
-          onSelectedModelChange={setSelectedModel}
-          creativityLevel={creativityLevel}
-          onCreativityLevelChange={setCreativityLevel}
-          
-          generatedGeometries={generatedGeometries}
-          selectedVariationIndex={selectedGeometryIndex}
-          onSelectVariation={setSelectedGeometryIndex}
-          workflowStep={workflowStep}
-          
-          // --- Pass new viewer controls state ---
           shadingMode={shadingMode}
-          onShadingModeChange={setShadingMode}
           lightingPreset={lightingPreset}
-          onLightingPresetChange={setLightingPreset}
+          sketchPreview={sketchPreview}
         />
+        
+        {/* --- UPDATED RENDER LOGIC --- */}
+        
+        {workflowStep !== 'results' ? (
+          <ControlBar
+            onFileChange={handleFileChange}
+            onGenerate={handleGeneration}
+            onToggleDrawing={handleToggleDrawing}
+            isGenerating={isGenerating}
+            // pipelineStatus={pipelineStatus} // <-- REMOVED
+            sketchPreview={sketchPreview}
+            onStartOver={handleStartOver}
+            numberOfVariations={numberOfVariations}
+            onNumberOfVariationsChange={setNumberOfVariations}
+            textPrompt={textPrompt}
+            onTextPromptChange={setTextPrompt}
+            workflowStep={workflowStep}
+          />
+        ) : (
+            <Sidebar
+                onStartOver={handleStartOver}
+                onResetVariations={handleResetVariations}
+                onExportOBJ={handleExportOBJ}
+                onExportSTL={handleExportSTL}
+                generatedGeometries={generatedGeometries}
+                selectedVariationIndex={selectedGeometryIndex}
+                onSelectVariation={setSelectedGeometryIndex}
+                shadingMode={shadingMode}
+                onShadingModeChange={setShadingMode}
+                lightingPreset={lightingPreset}
+                onLightingPresetChange={setLightingPreset}
+            />
+        )}
       </main>
       <Toast message={error} onDismiss={() => setError(null)} />
     </div>
