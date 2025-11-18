@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // import type { PipelineStatus } from '../types'; // <-- REMOVED
 // import { PipelineStage } from '../types'; // <-- REMOVED
-import type { WorkflowStep, ModelId } from '../App';
+import type { WorkflowStep, ModelId } from './Workspace';
 import { FileUpload } from './FileUpload';
 import {
   SparklesIcon,

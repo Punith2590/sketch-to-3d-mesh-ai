@@ -1,27 +1,34 @@
-
 import React, { useState } from 'react';
-import { CubeIcon } from './icons';
-import { UserIcon } from './icons';
-import { LockIcon } from './icons';
+import { CubeIcon, UserIcon, LockIcon } from './icons';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from './firebase';
 
 interface LoginPageProps {
-  onLogin: () => void;
   onNavigateToSignUp: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToSignUp }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
     }
     setError('');
-    onLogin();
+    
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (e: any) {
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+        setError('Invalid email or password.');
+      } else {
+        setError('Failed to sign in. Please try again.');
+      }
+    }
   };
 
   return (
@@ -36,9 +43,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToSignU
           <h1 className="text-3xl font-bold tracking-wider">
             Sketch-to-3D <span className="text-brand-primary font-bold">Mesh AI</span>
           </h1>
-          <p className="mt-2 text-content-muted">Sign in to the AI workspace.</p>
+          <p className="mt-2 text-content-muted">Login to the AI workspace.</p>
         </div>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        
+        {/* --- ADD autoComplete="off" TO FORM --- */}
+        <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <UserIcon className="w-5 h-5 text-content-muted" />
@@ -50,6 +59,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToSignU
               className="w-full pl-10 p-3 bg-base-300/70 text-content border border-base-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               placeholder="Email address"
               required
+              autoComplete="off" // <-- ADD THIS
             />
           </div>
           <div className="relative">
@@ -63,6 +73,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToSignU
               className="w-full pl-10 p-3 bg-base-300/70 text-content border border-base-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               placeholder="Password"
               required
+              autoComplete="new-password" // <-- ADD THIS
             />
           </div>
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
@@ -71,7 +82,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToSignU
               type="submit"
               className="w-full bg-brand-primary/80 hover:bg-brand-primary text-black font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-brand-primary/50"
             >
-              Sign In
+              Login
             </button>
           </div>
         </form>

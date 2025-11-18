@@ -1,21 +1,19 @@
-
 import React, { useState } from 'react';
-import { CubeIcon } from './icons';
-import { UserIcon } from './icons';
-import { LockIcon } from './icons';
+import { CubeIcon, UserIcon, LockIcon } from './icons';
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from './firebase';
 
 interface SignUpPageProps {
   onNavigateToLogin: () => void;
-  onSignUpSuccess: () => void;
 }
 
-export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSignUpSuccess }) => {
+export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !password || !confirmPassword) {
       setError('Please fill in all fields.');
@@ -26,9 +24,19 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
       return;
     }
     setError('');
-    // In a real app, you would register the user and then log them in.
-    // For this demo, we'll just call the success callback.
-    onSignUpSuccess();
+    
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (e: any) {
+      if (e.code === 'auth/email-already-in-use') {
+        setError('This email is already in use.');
+      } else if (e.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else {
+        console.error(e);
+        setError('Failed to sign up. Please try again.');
+      }
+    }
   };
 
   return (
@@ -45,7 +53,9 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
           </h1>
           <p className="mt-2 text-content-muted">Join to start creating 3D models from sketches.</p>
         </div>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        
+        {/* --- ADD autoComplete="off" TO FORM --- */}
+        <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <UserIcon className="w-5 h-5 text-content-muted" />
@@ -57,6 +67,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
               className="w-full pl-10 p-3 bg-base-300/70 text-content border border-base-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               placeholder="Email address"
               required
+              autoComplete="off" // <-- ADD THIS
             />
           </div>
           <div className="relative">
@@ -70,6 +81,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
               className="w-full pl-10 p-3 bg-base-300/70 text-content border border-base-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               placeholder="Password"
               required
+              autoComplete="new-password" // <-- ADD THIS
             />
           </div>
           <div className="relative">
@@ -83,6 +95,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
               className="w-full pl-10 p-3 bg-base-300/70 text-content border border-base-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               placeholder="Confirm Password"
               required
+              autoComplete="new-password" // <-- ADD THIS
             />
           </div>
           {error && <p className="text-sm text-red-400 text-center">{error}</p>}
@@ -102,7 +115,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onNavigateToLogin, onSig
             onClick={onNavigateToLogin}
             className="font-semibold text-brand-primary hover:underline focus:outline-none"
           >
-            Sign In
+            Login
           </button>
         </p>
       </div>

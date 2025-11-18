@@ -7,18 +7,17 @@ import {
   SunIcon,
   TrashIcon,
   DownloadIcon,
-  // TargetIcon, // <-- REMOVED
-} from './icons'; // Assumes you have the consolidated icon file
-
-// Import types from App.tsx
-import type { ShadingMode, LightingPreset } from '../App';
+} from './icons';
+import type { ShadingMode, LightingPreset } from '../components/Workspace'; // <-- Updated import path
+import { auth } from './firebase'; // <-- Import auth
+import { signOut } from 'firebase/auth'; // <-- Import signOut
 
 interface SidebarProps {
   onStartOver: () => void;
   onResetVariations: () => void;
   onExportOBJ: () => void;
   onExportSTL: () => void;
-  generatedGeometries: any[]; // Simple array for length
+  generatedGeometries: any[];
   selectedVariationIndex: number | null;
   onSelectVariation: (index: number) => void;
   shadingMode: ShadingMode;
@@ -27,7 +26,6 @@ interface SidebarProps {
   onLightingPresetChange: (preset: LightingPreset) => void;
 }
 
-// Button component (unchanged)
 const IconButton: React.FC<{
   title: string;
   onClick: () => void;
@@ -51,9 +49,9 @@ const IconButton: React.FC<{
   </button>
 );
 
-// --- REMOVED: AccuracyMeter component ---
 
 export const Sidebar: React.FC<SidebarProps> = (props) => {
+
   return (
     <div className="absolute top-20 left-0 bottom-0 z-20 p-4">
       <div className="bg-base-200/50 backdrop-blur-lg border border-base-300/50 rounded-2xl shadow-2xl p-4 h-full w-56 flex flex-col justify-between animate-fade-in">
@@ -105,8 +103,6 @@ export const Sidebar: React.FC<SidebarProps> = (props) => {
 
         {/* Bottom Section: Variations & Export */}
         <div className="flex flex-col gap-2">
-          
-          {/* --- REMOVED: Accuracy Meter --- */}
           
           {/* Variation Toggles */}
           <div className="flex items-center justify-center gap-2 bg-base-300/50 rounded-full p-1 mt-3">
