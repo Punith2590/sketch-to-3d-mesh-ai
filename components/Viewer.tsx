@@ -2,7 +2,7 @@ import React, { Suspense, forwardRef, useMemo, useState, useEffect, useRef } fro
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Icosahedron, Html } from '@react-three/drei';
 import * as THREE from 'three';
-// @ts-ignore (Adjust path if your Workspace.tsx is elsewhere)
+// @ts-ignore 
 import type { ShadingMode, LightingPreset } from './Workspace'; 
 
 interface ViewerProps {
@@ -19,7 +19,7 @@ interface GeneratedModelProps {
   shadingMode: ShadingMode;
 }
 
-// --- Lighting Component (Unchanged) ---
+// --- Lighting Component (Original Clean Style) ---
 const Lighting: React.FC<{ preset: LightingPreset }> = ({ preset }) => {
   if (preset === 'outdoor') {
     return (
@@ -45,12 +45,13 @@ const Lighting: React.FC<{ preset: LightingPreset }> = ({ preset }) => {
   );
 };
 
-// --- Generated Model Component (Unchanged) ---
+// --- Generated Model Component ---
 const GeneratedModel = forwardRef<THREE.Mesh, GeneratedModelProps>(({ geometry, shadingMode }, ref) => {
     const materialRef = useRef<THREE.MeshStandardMaterial>(null!);
     
     useFrame(() => {
       if (materialRef.current) {
+        // Smooth fade in
         materialRef.current.opacity = THREE.MathUtils.lerp(materialRef.current.opacity, 1, 0.1);
       }
     });
@@ -79,7 +80,7 @@ const GeneratedModel = forwardRef<THREE.Mesh, GeneratedModelProps>(({ geometry, 
 });
 GeneratedModel.displayName = 'GeneratedModel';
 
-// --- Placeholder Component (Unchanged) ---
+// --- Placeholder Component ---
 const Placeholder: React.FC = () => {
     const meshRef = useRef<THREE.Mesh>(null!);
     useFrame((_, delta) => {
@@ -95,108 +96,68 @@ const Placeholder: React.FC = () => {
     )
 }
 
-// --- UPDATED DYNAMIC LOADER COMPONENT ---
-const LOADING_MESSAGES = [
-  "Stage 1: Analyzing sketch...",
-  "Stage 1: Generating photorealistic 2D image...",
-  "Stage 1: Preparing image for 3D conversion...",
-  "Stage 2: Building 3D geometry...",
-  "Stage 2: Analyzing 3D mesh...",
-  "Stage 2: Finalizing 3D model...",
+// --- NEW: Enhanced "Terminal" Loader ---
+const LOG_LINES = [
+  "> INITIALIZING NEURAL PATHWAYS...",
+  "> CONNECTING TO GPU CLUSTER...",
+  "> ANALYZING SKETCH TOPOLOGY...",
+  "> DETECTING EDGES...",
+  "> GENERATING DEPTH MAP...",
+  "> EXTRUDING GEOMETRY...",
+  "> OPTIMIZING MESH DENSITY...",
+  "> CALCULATING NORMALS...",
+  "> APPLYING TEXTURE...",
+  "> FINALIZING MODEL..."
 ];
 
-const Loader: React.FC<{ sketchPreview: string | null }> = ({ sketchPreview }) => {
-    const meshRef = useRef<THREE.Mesh>(null!);
-    const [loadingText, setLoadingText] = useState(LOADING_MESSAGES[0]);
-    const [animationStage, setAnimationStage] = useState<'stage1' | 'stage2'>('stage1');
-    
-    useFrame(({ clock }) => {
-        // This just rotates the 3D wireframe
-        if(meshRef.current) {
-            meshRef.current.rotation.y = clock.getElapsedTime() * 0.5;
-            meshRef.current.rotation.x = clock.getElapsedTime() * 0.2;
-        }
-    });
+const TerminalLoader: React.FC<{ sketchPreview: string | null }> = ({ sketchPreview }) => {
+    const [logs, setLogs] = useState<string[]>([]);
 
     useEffect(() => {
-        // --- Cycle through loading messages ---
-        let index = 0;
-        const textInterval = setInterval(() => {
-            index = (index + 1) % LOADING_MESSAGES.length;
-            setLoadingText(LOADING_MESSAGES[index]);
-
-            // --- Switch the animation stage ---
-            // If we hit the first "Stage 2" message (index 3), switch the visual
-            if (index === 3) { 
-                setAnimationStage('stage2');
+        let currentIndex = 0;
+        const interval = setInterval(() => {
+            if (currentIndex < LOG_LINES.length) {
+                setLogs(prev => [...prev.slice(-4), LOG_LINES[currentIndex]]); // Keep last 5 lines
+                currentIndex++;
+            } else {
+                currentIndex = 0;
+                setLogs([]);
             }
-        }, 2500); // Change text every 2.5 seconds
-
-        return () => clearInterval(textInterval);
+        }, 800);
+        return () => clearInterval(interval);
     }, []);
 
     return (
-      <>
         <Html center>
-            <div className="text-center text-content w-72 flex flex-col items-center">
-                
-                {/* --- This container holds the swapping animation --- */}
-                <div className="w-48 h-48 rounded-lg border-2 border-base-300 mb-4 bg-base-300/20 overflow-hidden relative">
-                    
-                    {/* Stage 1: Sketch Preview + Scanline */}
-                    <div 
-                      className={`absolute inset-0 transition-opacity duration-300 ${
-                        animationStage === 'stage1' ? 'animate-fade-in-fast opacity-100' : 'animate-fade-out-fast opacity-0'
-                      }`}
-                    >
-                      {sketchPreview && (
-                          <img 
-                              src={sketchPreview} 
-                              alt="Your sketch" 
-                              className="w-full h-full object-contain bg-white"
-                          />
-                      )}
-                      {/* The Scanline */}
-                      <div className="absolute left-0 w-full h-1 bg-brand-primary/50 shadow-[0_0_10px_2px_#39FF14] animate-scanline"></div>
-                    </div>
-
-                    {/* Stage 2: 3D Wireframe Preview */}
-                    <div 
-                      className={`absolute inset-0 transition-opacity duration-300 ${
-                        animationStage === 'stage2' ? 'animate-fade-in-fast opacity-100' : 'animate-fade-out-fast opacity-0'
-                      }`}
-                    >
-                      {/* This is a mini 3D canvas inside the HTML loader */}
-                      <Canvas camera={{ position: [0, 0, 2.5] }}>
-                          <Icosahedron ref={meshRef} args={[1, 2]}>
-                              <meshStandardMaterial 
-                                wireframe 
-                                color="#39FF14" 
-                                roughness={0.5} 
-                                emissive="#39FF14" 
-                                emissiveIntensity={0.5} 
-                              />
-                          </Icosahedron>
-                      </Canvas>
-                    </div>
+             {/* Offset slightly to the left to center visually */}
+            <div className="flex gap-6 items-center transform -translate-x-12 w-[500px]">
+                {/* 1. Scanning Preview */}
+                <div className="relative w-32 h-32 border border-brand-primary/50 rounded-lg overflow-hidden bg-black/50 backdrop-blur-sm shrink-0">
+                    {sketchPreview && (
+                        <img src={sketchPreview} className="w-full h-full object-cover opacity-50" alt="preview" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-primary/20 to-transparent animate-scanline h-full w-full" />
                 </div>
 
-                {/* Loading text and progress bar */}
-                <p className="text-xl font-bold text-brand-primary h-6">
-                    {loadingText}
-                </p>
-                <div className="w-full bg-base-300/50 rounded-full h-1.5 mt-4 overflow-hidden">
-                    <div className="bg-brand-primary h-1.5 w-1/2 animate-infinite-progress" />
+                {/* 2. Terminal Logs */}
+                <div className="flex-grow font-mono text-xs space-y-1 text-left">
+                    <div className="border-b border-white/10 pb-1 mb-2 text-brand-primary font-bold flex justify-between">
+                        <span>SYSTEM STATUS</span>
+                        <span className="animate-pulse text-brand-secondary">PROCESSING</span>
+                    </div>
+                    {logs.map((log, i) => (
+                        <div key={i} className="text-brand-primary/80 animate-fade-in-fast">
+                            {log}
+                        </div>
+                    ))}
+                    <div className="text-brand-primary animate-pulse">_</div>
                 </div>
             </div>
         </Html>
-      </>
     );
-}
-// --- END OF UPDATED LOADER ---
+};
 
-
-// --- Component to handle model logic and positioning (Unchanged) ---
+// --- Model Logic Wrapper (FIXED POSITIONING) ---
 const ModelWrapper: React.FC<ViewerProps> = (props) => {
     const [geometry, modelCenter] = useMemo(() => {
         if (!props.geometry) return [null, null];
@@ -205,12 +166,21 @@ const ModelWrapper: React.FC<ViewerProps> = (props) => {
             geo.setAttribute('position', new THREE.Float32BufferAttribute(props.geometry.vertices, 3));
             geo.setIndex(props.geometry.faces);
             geo.computeVertexNormals(); 
+            
+            // 1. Center the geometry at (0,0,0)
             geo.center(); 
             
+            // 2. Calculate the offset to sit on the floor
             geo.computeBoundingBox();
             if (geo.boundingBox) {
-                const yOffset = -geo.boundingBox.min.y;
-                const center = new THREE.Vector3(0, yOffset - 1, 0);
+                // CRITICAL FIX: 
+                // Since we rotate the group by -90 degrees on X (to make Z-up models stand up),
+                // The local Z axis becomes the global Y axis (Height).
+                // We must use min.z (not min.y) to find the bottom of the model.
+                const heightOffset = -geo.boundingBox.min.z; 
+                
+                // Place it at -1 (grid level) + offset
+                const center = new THREE.Vector3(0, heightOffset - 1, 0);
                 return [geo, center];
             }
             return [geo, new THREE.Vector3(0, -1, 0)];
@@ -225,7 +195,7 @@ const ModelWrapper: React.FC<ViewerProps> = (props) => {
             {geometry && modelCenter && (
                 <group 
                   position={modelCenter} 
-                  rotation={[-Math.PI / 2, 0, 0]} 
+                  rotation={[-Math.PI / 2, 0, 0]} // Rotates Z-up to Y-up
                 > 
                     <GeneratedModel 
                       geometry={geometry} 
@@ -242,14 +212,12 @@ const ModelWrapper: React.FC<ViewerProps> = (props) => {
                 minDistance={0.5} 
                 maxDistance={20}
                 minPolarAngle={0}
-                maxPolarAngle={Math.PI}
+                maxPolarAngle={Math.PI / 2 - 0.05} // Prevent camera from going under the floor
             />
         </>
     );
 };
 
-
-// --- UPDATED VIEWER COMPONENT ---
 export const Viewer: React.FC<ViewerProps> = (props) => {
   return (
     <div className="w-full h-full bg-base-100 relative">
@@ -260,14 +228,15 @@ export const Viewer: React.FC<ViewerProps> = (props) => {
         <Lighting preset={props.lightingPreset} />
         
         <Suspense fallback={null}>
-            {/* Show placeholder ONLY if not generating and no geometry */}
+            {/* Show placeholder only if mostly idle */}
             {!props.geometry && !props.isGenerating && <Placeholder />}
             
-            {/* The ModelWrapper now handles geometry and controls */}
             <ModelWrapper {...props} />
             
+            {/* Grid at y = -1 */}
             <gridHelper args={[50, 50, '#505050', '#303030']} position={[0, -1, 0]} />
 
+            {/* Transparent Shadow Plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.001, 0]} receiveShadow>
                 <planeGeometry args={[100, 100]} />
                 <shadowMaterial opacity={0.3} />
@@ -275,8 +244,8 @@ export const Viewer: React.FC<ViewerProps> = (props) => {
             
         </Suspense>
         
-        {/* Make sure sketchPreview is passed to the Loader */}
-        {props.isGenerating && <Loader sketchPreview={props.sketchPreview} />}
+        {/* New Terminal Loader */}
+        {props.isGenerating && <TerminalLoader sketchPreview={props.sketchPreview} />}
 
       </Canvas>
       {!props.geometry && !props.isGenerating && (

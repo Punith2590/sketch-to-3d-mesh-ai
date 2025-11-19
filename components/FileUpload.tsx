@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { UploadIcon } from './icons/UploadIcon';
+import { UploadIcon } from './icons';
 
 interface FileUploadButtonProps {
   onFileChange: (file: File | null) => void;
