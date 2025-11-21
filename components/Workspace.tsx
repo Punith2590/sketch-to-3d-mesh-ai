@@ -43,8 +43,9 @@ const Workspace: React.FC = () => {
   const [shadingMode, setShadingMode] = useState<ShadingMode>('shaded');
   const [lightingPreset, setLightingPreset] = useState<LightingPreset>('studio');
   
-  // --- NEW: COLORING STATE ---
+  // --- COLORING & EDITING STATE ---
   const [showColors, setShowColors] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // --- FIREBASE AUTH LISTENER ---
   useEffect(() => {
@@ -68,6 +69,21 @@ const Workspace: React.FC = () => {
   const navigateToLogin = () => setAuthScreen('login');
 
   // --- CORE APP FUNCTIONS ---
+  const handleResetVariations = useCallback(() => {
+    setIsGenerating(false);
+    setGeneratedGeometries([]);
+    setSelectedGeometryIndex(null);
+    setError(null);
+    setShowColors(false);
+    setIsEditing(false);
+    
+    // Only go to 'generating' if we actually HAVE a file
+    // This caused the bug in Start Over, so we won't call this function there anymore
+    if (sketchFile) {
+      setWorkflowStep('generating');
+    }
+  }, [sketchFile]);
+
   const handleFileChange = (file: File | null) => {
     if (file) {
       setSketchFile(file);
@@ -76,10 +92,35 @@ const Workspace: React.FC = () => {
         setSketchPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      handleResetVariations();
+      // Here we DO want to reset and go to generating
+      setIsGenerating(false);
+      setGeneratedGeometries([]);
+      setSelectedGeometryIndex(null);
+      setError(null);
+      setShowColors(false);
+      setIsEditing(false);
       setWorkflowStep('generating');
     }
   };
+
+  // --- FIXED: HANDLE START OVER ---
+  const handleStartOver = useCallback(() => {
+    // 1. Clear File Data
+    setSketchFile(null);
+    setSketchPreview(null);
+    
+    // 2. Force Step to Upload
+    setWorkflowStep('upload');
+
+    // 3. Manually reset other states (Do NOT call handleResetVariations here)
+    setIsGenerating(false);
+    setGeneratedGeometries([]);
+    setSelectedGeometryIndex(null);
+    setError(null);
+    setShowColors(false);
+    setIsEditing(false);
+    setTextPrompt(''); // Clear prompt too for a fresh start
+  }, []);
 
   const handleGeneration = async () => {
     if (!sketchFile) {
@@ -87,7 +128,13 @@ const Workspace: React.FC = () => {
       return;
     }
 
-    const BACKEND_URL = "https://wisely-hazelly-cherly.ngrok-free.dev/generate-mesh/"; // <--- UPDATE THIS
+    // ⚠️ PASTE YOUR NGROK URL HERE ⚠️
+    const BACKEND_URL = "https://uncorroboratively-olivary-elissa.ngrok-free.dev/generate-mesh/"; 
+
+    if (BACKEND_URL.includes("your-ngrok-url-here")) {
+        setError("Please update the BACKEND_URL in components/Workspace.tsx");
+        return;
+    }
 
     setIsGenerating(true);
     setError(null);
@@ -103,6 +150,9 @@ const Workspace: React.FC = () => {
       
       const response = await fetch(BACKEND_URL, {
         method: "POST",
+        headers: {
+          "ngrok-skip-browser-warning": "69420", 
+        },
         body: formData,
       });
 
@@ -121,7 +171,7 @@ const Workspace: React.FC = () => {
         return {
           vertices: res.vertices,
           faces: res.faces,
-          colors: res.colors || [] // Capture colors from backend
+          colors: res.colors || []
         };
       }).filter((g: GeneratedGeometry | null) => g !== null);
 
@@ -141,24 +191,6 @@ const Workspace: React.FC = () => {
       setIsGenerating(false);
     }
   };
-
-  const handleStartOver = useCallback(() => {
-    setSketchFile(null);
-    setSketchPreview(null);
-    setWorkflowStep('upload');
-    handleResetVariations();
-  }, []);
-
-  const handleResetVariations = useCallback(() => {
-    setIsGenerating(false);
-    setGeneratedGeometries([]);
-    setSelectedGeometryIndex(null);
-    setError(null);
-    setShowColors(false); // Reset colors on new generation
-    if (sketchFile) {
-      setWorkflowStep('generating');
-    }
-  }, [sketchFile]);
 
   // --- EXPORT FUNCTIONS ---
   const saveFile = (blob: Blob, filename: string) => {
@@ -268,7 +300,8 @@ const Workspace: React.FC = () => {
           shadingMode={shadingMode}
           lightingPreset={lightingPreset}
           sketchPreview={sketchPreview}
-          showColors={showColors} // Pass state
+          showColors={showColors}
+          isEditing={isEditing} 
         />
         
         {workflowStep !== 'results' && (
@@ -301,8 +334,10 @@ const Workspace: React.FC = () => {
                 onShadingModeChange={setShadingMode}
                 lightingPreset={lightingPreset}
                 onLightingPresetChange={setLightingPreset}
-                showColors={showColors} // Pass state
-                onToggleColor={() => setShowColors(!showColors)} // Pass toggle handler
+                showColors={showColors}
+                onToggleColor={() => setShowColors(!showColors)}
+                isEditing={isEditing}
+                onToggleEdit={() => setIsEditing(!isEditing)}
             />
             <AccuracyDisplay 
               selectedVariationIndex={selectedGeometryIndex}

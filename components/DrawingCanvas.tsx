@@ -369,11 +369,20 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onComplete, onCanc
     const canvas = canvasRef.current;
     const context = contextRef.current;
     if (canvas && context) {
-      // Re-run setup to clear and reset history
-      setupCanvas();
+      // 1. Force wipe the canvas clean
+      context.fillStyle = '#FFFFFF';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 2. Reset settings (color/brush) that might be lost
+      setContextSettings(); 
+
+      // 3. Reset History so "Undo" doesn't bring back the mess
+      const initialImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      setHistory([initialImageData]);
+      setRedoHistory([]);
     }
   };
-
+  
   const handleComplete = () => {
     canvasRef.current?.toBlob((blob) => {
       if (blob) {

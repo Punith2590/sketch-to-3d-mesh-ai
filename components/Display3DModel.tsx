@@ -1,7 +1,6 @@
-import React, { Suspense, useRef } from 'react';
-import { Canvas, useLoader, useFrame } from '@react-three/fiber';
+import React, { Suspense } from 'react';
+import { Canvas, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment, Html, Stars, Center, TorusKnot } from '@react-three/drei';
-// --- FIX 1: Import loaders from 'three-stdlib' to fix TypeScript errors ---
 import { OBJLoader, STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
 
@@ -11,7 +10,6 @@ interface Display3DModelProps {
 
 // Component to render the actual file (OBJ/STL)
 const FileModel: React.FC<{ modelPath: string }> = ({ modelPath }) => {
-  const meshRef = useRef<THREE.Mesh>(null!);
   const isObj = modelPath.endsWith('.obj');
   const isStl = modelPath.endsWith('.stl');
 
@@ -32,19 +30,12 @@ const FileModel: React.FC<{ modelPath: string }> = ({ modelPath }) => {
     geometry = useLoader(STLLoader, modelPath) as THREE.BufferGeometry;
   }
 
-  // Auto-center and scale
-  useFrame(() => {
-    if (meshRef.current && geometry) {
-       // Simple auto-rotation
-       meshRef.current.rotation.y += 0.005;
-    }
-  });
-
   if (!geometry) return null;
 
   return (
     <Center>
-       <mesh ref={meshRef} geometry={geometry} scale={[2,2,2]}>
+       {/* FIX: Added rotation={[-Math.PI / 2, 0, 0]} to stand the model upright */}
+       <mesh geometry={geometry} scale={[2,2,2]} rotation={[-Math.PI / 2, 0, 0]}>
          <meshStandardMaterial color="#E2E8F0" roughness={0.4} metalness={0.6} />
        </mesh>
     </Center>
@@ -77,6 +68,7 @@ export const Display3DModel: React.FC<Display3DModelProps> = ({ modelPath }) => 
          {isPlaceholder ? <FallbackShape /> : <FileModel modelPath={modelPath} />}
       </Suspense>
       
+      {/* Auto-rotate is handled here by the camera controller */}
       <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={2} />
       <Environment preset="city" />
     </Canvas>

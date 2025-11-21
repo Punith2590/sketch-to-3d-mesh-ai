@@ -1,4 +1,5 @@
 import React from 'react';
+import { store } from '../components/Viewer';
 import {
   UndoIcon,
   PaintbrushIcon,
@@ -7,7 +8,10 @@ import {
   SunIcon,
   TrashIcon,
   DownloadIcon,
-  PaintBucketIcon, // Ensure this is imported
+  PaintBucketIcon,
+  MousePointerIcon,
+  VrIcon,
+  CubeIcon
 } from './icons';
 import type { ShadingMode, LightingPreset } from '../types';
 
@@ -23,9 +27,10 @@ interface SidebarProps {
   onShadingModeChange: (mode: ShadingMode) => void;
   lightingPreset: LightingPreset;
   onLightingPresetChange: (preset: LightingPreset) => void;
-  // --- NEW PROPS ---
   showColors: boolean;
   onToggleColor: () => void;
+  isEditing: boolean;
+  onToggleEdit: () => void;
 }
 
 const IconButton: React.FC<{
@@ -38,7 +43,7 @@ const IconButton: React.FC<{
   <button
     title={title}
     onClick={onClick}
-    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+    className={`w-full flex-shrink-0 flex items-center gap-3 p-3 rounded-lg transition-colors ${
       isActive
         ? 'bg-brand-primary text-black'
         : isDanger
@@ -53,78 +58,66 @@ const IconButton: React.FC<{
 
 export const Sidebar: React.FC<SidebarProps> = (props) => {
   return (
-    <div className="absolute top-20 left-0 bottom-0 z-20 p-4">
-      <div className="bg-base-200/50 backdrop-blur-lg border border-base-300/50 rounded-2xl shadow-2xl p-4 h-full w-56 flex flex-col justify-between animate-fade-in">
+    <div className="absolute top-20 left-0 bottom-0 z-20 p-4 pointer-events-none">
+      {/* Added: max-h-[80vh] and overflow-y-auto to handle small screens */}
+      <div className="pointer-events-auto bg-base-200/50 backdrop-blur-lg border border-base-300/50 rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 max-h-[85vh] overflow-y-auto animate-fade-in scrollbar-hide">
         
         {/* Top Section */}
         <div className="flex flex-col gap-2">
-          <IconButton
-            title="Start Over"
-            onClick={props.onStartOver}
-            isActive={false}
-          >
+          <IconButton title="Start Over" onClick={props.onStartOver} isActive={false}>
             <UndoIcon className="w-5 h-5" />
           </IconButton>
 
-          <div className="w-full h-px bg-base-300/50 my-2"></div>
+          <div className="w-full h-px bg-base-300/50 my-1"></div>
 
-          {/* --- NEW: COLORIZE BUTTON --- */}
-          <IconButton
-            title="Colorize"
-            onClick={props.onToggleColor}
-            isActive={props.showColors}
-          >
+          <IconButton title="Colorize" onClick={props.onToggleColor} isActive={props.showColors}>
             <PaintBucketIcon className="w-5 h-5" />
           </IconButton>
 
-          <div className="w-full h-px bg-base-300/50 my-2"></div>
+          <IconButton title="Edit Shape" onClick={props.onToggleEdit} isActive={props.isEditing}>
+            <MousePointerIcon className="w-5 h-5" />
+          </IconButton>
 
-          <IconButton
-            title="Shaded"
-            onClick={() => props.onShadingModeChange('shaded')}
-            isActive={props.shadingMode === 'shaded'}
-          >
+          <div className="w-full h-px bg-base-300/50 my-1"></div>
+
+          <IconButton title="Enter AR" onClick={() => store.enterAR()} isActive={false}>
+            <CubeIcon className="w-5 h-5" />
+          </IconButton>
+
+          <IconButton title="Enter VR" onClick={() => store.enterVR()} isActive={false}>
+            <VrIcon className="w-5 h-5" />
+          </IconButton>
+
+          <div className="w-full h-px bg-base-300/50 my-1"></div>
+
+          <IconButton title="Shaded" onClick={() => props.onShadingModeChange('shaded')} isActive={props.shadingMode === 'shaded'}>
             <PaintbrushIcon className="w-5 h-5" />
           </IconButton>
-          <IconButton
-            title="Wireframe"
-            onClick={() => props.onShadingModeChange('wireframe')}
-            isActive={props.shadingMode === 'wireframe'}
-          >
+          <IconButton title="Wireframe" onClick={() => props.onShadingModeChange('wireframe')} isActive={props.shadingMode === 'wireframe'}>
             <GridIcon className="w-5 h-5" />
           </IconButton>
           
-          <div className="w-full h-px bg-base-300/50 my-2"></div>
+          <div className="w-full h-px bg-base-300/50 my-1"></div>
           
-          <IconButton
-            title="Studio Light"
-            onClick={() => props.onLightingPresetChange('studio')}
-            isActive={props.lightingPreset === 'studio'}
-          >
+          <IconButton title="Studio Light" onClick={() => props.onLightingPresetChange('studio')} isActive={props.lightingPreset === 'studio'}>
             <ZapIcon className="w-5 h-5" />
           </IconButton>
-          <IconButton
-            title="Outdoor Light"
-            onClick={() => props.onLightingPresetChange('outdoor')}
-            isActive={props.lightingPreset === 'outdoor'}
-          >
+          <IconButton title="Outdoor Light" onClick={() => props.onLightingPresetChange('outdoor')} isActive={props.lightingPreset === 'outdoor'}>
             <SunIcon className="w-5 h-5" />
           </IconButton>
         </div>
 
         {/* Bottom Section */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mt-auto pt-2">
+          <div className="w-full h-px bg-base-300/50 my-1"></div>
           
-          <div className="flex items-center justify-center gap-2 bg-base-300/50 rounded-full p-1 mt-3">
+          <div className="flex items-center justify-center gap-2 bg-base-300/50 rounded-full p-1">
             {Array.from({ length: props.generatedGeometries.length }).map((_, index) => (
               <button
                 key={index}
-                title={`Variation ${index + 1}`}
                 onClick={() => props.onSelectVariation(index)}
-                className={`w-10 h-10 rounded-full text-sm font-bold transition-all duration-300 transform hover:scale-105 flex items-center justify-center ${
-                  props.selectedVariationIndex === index
-                  ? 'bg-brand-primary text-black shadow-md'
-                  : 'text-content-muted hover:bg-base-300'
+                className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
+                  props.selectedVariationIndex === index ? 'bg-brand-primary text-black' : 'text-content-muted'
                 }`}
               >
                 {index + 1}
@@ -132,28 +125,13 @@ export const Sidebar: React.FC<SidebarProps> = (props) => {
             ))}
           </div>
 
-          <div className="w-full h-px bg-base-300/50 my-2"></div>
-
-          <IconButton
-            title="Regenerate"
-            onClick={props.onResetVariations}
-            isActive={false}
-            isDanger={true}
-          >
+          <IconButton title="Regenerate" onClick={props.onResetVariations} isActive={false} isDanger={true}>
             <TrashIcon className="w-5 h-5" />
           </IconButton>
-          <IconButton
-            title="Export OBJ"
-            onClick={props.onExportOBJ}
-            isActive={false}
-          >
+          <IconButton title="Export OBJ" onClick={props.onExportOBJ} isActive={false}>
             <DownloadIcon className="w-5 h-5" />
           </IconButton>
-          <IconButton
-            title="Export STL"
-            onClick={props.onExportSTL}
-            isActive={false}
-          >
+          <IconButton title="Export STL" onClick={props.onExportSTL} isActive={false}>
             <DownloadIcon className="w-5 h-5" />
           </IconButton>
         </div>
