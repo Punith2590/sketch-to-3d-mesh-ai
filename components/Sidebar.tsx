@@ -7,10 +7,9 @@ import {
   SunIcon,
   TrashIcon,
   DownloadIcon,
+  PaintBucketIcon, // Ensure this is imported
 } from './icons';
-import type { ShadingMode, LightingPreset } from '../components/Workspace'; // <-- Updated import path
-import { auth } from './firebase'; // <-- Import auth
-import { signOut } from 'firebase/auth'; // <-- Import signOut
+import type { ShadingMode, LightingPreset } from '../types';
 
 interface SidebarProps {
   onStartOver: () => void;
@@ -24,6 +23,9 @@ interface SidebarProps {
   onShadingModeChange: (mode: ShadingMode) => void;
   lightingPreset: LightingPreset;
   onLightingPresetChange: (preset: LightingPreset) => void;
+  // --- NEW PROPS ---
+  showColors: boolean;
+  onToggleColor: () => void;
 }
 
 const IconButton: React.FC<{
@@ -49,14 +51,12 @@ const IconButton: React.FC<{
   </button>
 );
 
-
 export const Sidebar: React.FC<SidebarProps> = (props) => {
-
   return (
     <div className="absolute top-20 left-0 bottom-0 z-20 p-4">
       <div className="bg-base-200/50 backdrop-blur-lg border border-base-300/50 rounded-2xl shadow-2xl p-4 h-full w-56 flex flex-col justify-between animate-fade-in">
         
-        {/* Top Section: Start Over & View Controls */}
+        {/* Top Section */}
         <div className="flex flex-col gap-2">
           <IconButton
             title="Start Over"
@@ -64,6 +64,17 @@ export const Sidebar: React.FC<SidebarProps> = (props) => {
             isActive={false}
           >
             <UndoIcon className="w-5 h-5" />
+          </IconButton>
+
+          <div className="w-full h-px bg-base-300/50 my-2"></div>
+
+          {/* --- NEW: COLORIZE BUTTON --- */}
+          <IconButton
+            title="Colorize"
+            onClick={props.onToggleColor}
+            isActive={props.showColors}
+          >
+            <PaintBucketIcon className="w-5 h-5" />
           </IconButton>
 
           <div className="w-full h-px bg-base-300/50 my-2"></div>
@@ -101,10 +112,9 @@ export const Sidebar: React.FC<SidebarProps> = (props) => {
           </IconButton>
         </div>
 
-        {/* Bottom Section: Variations & Export */}
+        {/* Bottom Section */}
         <div className="flex flex-col gap-2">
           
-          {/* Variation Toggles */}
           <div className="flex items-center justify-center gap-2 bg-base-300/50 rounded-full p-1 mt-3">
             {Array.from({ length: props.generatedGeometries.length }).map((_, index) => (
               <button
